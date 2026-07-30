@@ -9,10 +9,13 @@ import { Revocations } from './revocations.js';
 const {
   BOT_TOKEN,
   SECRET_KEY,
-  PUBLIC_URL, // masalan https://pingo.onrender.com — bo'lsa webhook, bo'lmasa long polling
   PORT = 3000,
   AGENT_PACKAGE = 'pingo-agent',
 } = process.env;
+
+// Render o'z manzilini RENDER_EXTERNAL_URL orqali beradi — qo'lda kiritish shart emas.
+// Manzil bo'lsa webhook, bo'lmasa long polling (lokal ishlab chiqish uchun).
+const PUBLIC_URL = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL;
 
 if (!BOT_TOKEN) throw new Error('BOT_TOKEN kiritilmagan');
 if (!SECRET_KEY || SECRET_KEY.length < 32) {

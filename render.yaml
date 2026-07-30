@@ -12,7 +12,5 @@ services:
         sync: false # Render panelida qo'lda kiritiladi
       - key: SECRET_KEY
         sync: false # openssl rand -hex 32 — bir marta yaratiladi, hech qachon o'zgartirilmaydi
-      - key: PUBLIC_URL
-        sync: false # masalan https://pingo.onrender.com
       - key: AGENT_PACKAGE
         value: pingo-agent
