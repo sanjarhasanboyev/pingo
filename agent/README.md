@@ -39,7 +39,7 @@ Config bo'sh bo'lsa agent PM2 va Docker'ni o'zi topadi. Qo'lda ko'rsatish:
 ```json
 {
   "key": "pg_xxxxx",
-  "server": "https://pingo.onrender.com",
+  "server": "https://pingo-7e6u.onrender.com",
   "watch": [
     { "type": "pm2" },
     { "type": "docker", "container": "api" },

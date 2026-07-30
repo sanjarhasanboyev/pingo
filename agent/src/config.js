@@ -5,7 +5,7 @@ import os from 'node:os';
 export const DEFAULT_DIR = path.join(os.homedir(), '.pingo');
 export const DEFAULT_PATH = path.join(DEFAULT_DIR, 'config.json');
 
-export const DEFAULT_SERVER = 'https://pingo.onrender.com';
+export const DEFAULT_SERVER = 'https://pingo-7e6u.onrender.com';
 
 export const DEFAULTS = {
   key: '',
