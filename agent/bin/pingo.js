@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import os from 'node:os';
+import { resolveHost } from '../src/host.js';
 import { loadConfig, saveConfig, DEFAULT_PATH, DEFAULTS } from '../src/config.js';
 import { runAgent, autoDetect } from '../src/index.js';
 
@@ -46,7 +46,7 @@ async function main() {
 
   if (cmd === 'doctor') {
     const found = autoDetect();
-    console.log(`host: ${os.hostname()}`);
+    console.log(`host: ${resolveHost()}`);
     console.log(found.length ? 'topilgan manbalar:' : 'manba topilmadi (pm2/docker yo‘q)');
     for (const s of found) console.log(`  - ${s.type}${s.container ? `/${s.container}` : ''}`);
     if (!found.length) {
@@ -98,7 +98,7 @@ async function main() {
           {
             level: 'info',
             source: 'pingo test',
-            host: os.hostname(),
+            host: resolveHost(),
             timestamp: Date.now(),
             message: 'Sinov xabari — ulanish ishlayapti ✅',
           },

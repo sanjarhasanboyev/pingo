@@ -86,6 +86,16 @@ docker run ... -e PINGO_IGNORE=xgo-backend,boshqasi ... pingo-agent
 
 yoki configda: `"ignore": ["xgo-backend"]`, yoki `pingo start --ignore xgo-backend`
 
+### Server nomi
+
+Docker'da ishlaganda `docker logs`/`/status` da chiqadigan host nomi
+konteyner ID'siga o'xshab qoladi (masalan `c92285940cb6`). Haqiqiy nom
+ko'rinishi uchun:
+
+```bash
+docker run ... -e PINGO_HOST=vmi3351203 ... pingo-agent
+```
+
 ## Talablar
 
 - Node.js 20+

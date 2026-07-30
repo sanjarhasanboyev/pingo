@@ -1,4 +1,4 @@
-import os from 'node:os';
+import { resolveHost } from './host.js';
 import { ReportQueue } from './queue.js';
 import { gitInfo } from './git.js';
 import { watchFile } from './watchers/file.js';
@@ -27,7 +27,7 @@ export function autoDetect(ignore = []) {
 export async function runAgent(config) {
   if (!config.key) throw new Error('kalit yo‘q — avval `pingo init` yoki `--key` bering');
 
-  const host = os.hostname();
+  const host = resolveHost();
   const watchers = [];
   const queue = new ReportQueue({ serverUrl: config.server, key: config.key, onLog: log });
   queue.start();
