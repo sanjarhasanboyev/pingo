@@ -6,6 +6,7 @@ import { Throttle } from './throttle.js';
 import { StatusStore } from './status.js';
 import { Revocations } from './revocations.js';
 import { Registrations } from './registrations.js';
+import { Connections } from './connections.js';
 
 const {
   BOT_TOKEN,
@@ -27,7 +28,8 @@ const derive_ = (purpose) => derive(purpose, SECRET_KEY);
 const status = new StatusStore();
 const revocations = new Revocations();
 const registrations = new Registrations();
-const bot = createBot({ botToken: BOT_TOKEN, secret: SECRET_KEY, status, revocations, registrations, agentPackage: AGENT_PACKAGE });
+const connections = new Connections();
+const bot = createBot({ botToken: BOT_TOKEN, secret: SECRET_KEY, status, revocations, registrations, connections, agentPackage: AGENT_PACKAGE });
 
 const throttle = new Throttle(async (chatId, event) => {
   try {
@@ -43,6 +45,7 @@ const throttle = new Throttle(async (chatId, event) => {
     if (err?.response?.error_code === 403) {
       revocations.revoke(chatId);
       status.forget(chatId);
+      connections.clear(chatId);
     }
     throw err;
   }

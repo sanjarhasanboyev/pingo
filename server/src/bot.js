@@ -62,11 +62,13 @@ export async function askWhatToWatch(bot, { regId, chatId, threadId, sources, ho
   });
 }
 
+const escHtml = (s) => esc(s);
+
 function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-export function createBot({ botToken, secret, status, revocations, registrations, agentPackage = 'pingo-agent' }) {
+export function createBot({ botToken, secret, status, revocations, registrations, connections, agentPackage = 'pingo-agent' }) {
   const bot = new Telegraf(botToken);
 
   bot.start(async (ctx) => {
@@ -111,6 +113,20 @@ export function createBot({ botToken, secret, status, revocations, registrations
     }
 
     // Nom ixtiyoriy: berilmasa agent ishga tushgach tugmalar orqali tanlanadi
+    // Guruhga allaqachon loyiha ulangan bo'lsa, qayta ulashga ruxsat bermaymiz —
+    // avval /disconnect qilish kerak. Aks holda eski kalit "yetim" qolib,
+    // hech kim bilmagan holda ikkita ulanish yashab qolardi.
+    const mavjud = connections.get(ctx.chat.id);
+    if (mavjud) {
+      return ctx.replyWithHTML(
+        [
+          `⚠️ Bu guruhga allaqachon <b>${escHtml(mavjud.project)}</b> ulangan.`,
+          '',
+          'Boshqa loyiha ulash uchun avval: <code>/disconnect</code>',
+        ].join('\n')
+      );
+    }
+
     const project =
       ctx.message.text.split(/\s+/).slice(1).join(' ').trim().slice(0, 64) || ctx.chat.title || 'loyiha';
 
@@ -118,9 +134,8 @@ export function createBot({ botToken, secret, status, revocations, registrations
     // ham o'sha bo'limga tushadi. Oddiy guruhda bu maydon bo'lmaydi.
     const threadId = ctx.message?.is_topic_message ? ctx.message.message_thread_id : undefined;
 
-    // Yangi kalit berilgandan keyin eski bekor qilish kuchini yo'qotadi
-    revocations.clear(ctx.chat.id);
     const token = createToken({ chatId: ctx.chat.id, project, threadId, secret });
+    connections.set(ctx.chat.id, project);
 
     await ctx.replyWithHTML(formatConnected(project, threadId));
 
@@ -152,6 +167,7 @@ export function createBot({ botToken, secret, status, revocations, registrations
 
     revocations.revoke(ctx.chat.id);
     status.forget(ctx.chat.id);
+    connections.clear(ctx.chat.id);
 
     await ctx.replyWithHTML(
       [
@@ -206,6 +222,7 @@ export function createBot({ botToken, secret, status, revocations, registrations
     if (st === 'left' || st === 'kicked') {
       revocations.revoke(ctx.chat.id);
       status.forget(ctx.chat.id);
+      connections.clear(ctx.chat.id);
       return;
     }
 
