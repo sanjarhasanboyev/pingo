@@ -42,7 +42,8 @@ export function extractSummary(message) {
   const lines = String(message || '').split('\n');
 
   for (const raw of lines) {
-    const line = raw.replace(LOG_PREFIX, '').trim();
+    // "Caused by:" — texnik prefiks, sarlavhaga kirmasligi kerak
+    const line = raw.replace(LOG_PREFIX, '').replace(/^Caused by:\s*/i, '').trim();
     const m = line.match(EXCEPTION);
     if (!m) continue;
 
