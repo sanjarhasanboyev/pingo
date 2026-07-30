@@ -1,0 +1,167 @@
+import { extractFrame, extractRequest } from './frame.js';
+import { extractSummary, extractOperation } from './summary.js';
+
+// Xatolarni aniqlash — dasturlash tiliga bog'liq emas, chunki
+// deyarli barcha tillar xatoni stdout/stderr ga shu ko'rinishlarda chiqaradi.
+
+const ERROR_START = [
+  /(^|[\s[|])(ERROR|FATAL|CRITICAL|SEVERE|EMERG|ALERT)([\s\]:|]|$)/, // umumiy log darajalari
+  /\b\w*(Exception|Error)\s*:/, // Error:, NullPointerException:, ValueError:
+  /^Traceback \(most recent call last\)/, // Python
+  /^panic:/, // Go
+  /^\s*goroutine \d+ \[/, // Go
+  /^PHP (Fatal|Parse|Recoverable) error/, // PHP
+  /^(Unhandled|Uncaught) (exception|rejection|error)/i, // Node, .NET
+  /^thread '.*' panicked at/, // Rust
+  /^\s*\*\* \(\w+Error\)/, // Elixir
+  /segmentation fault|core dumped/i, // C/C++
+];
+
+// Yangi, xato bo'lmagan log qatori — ochiq blokni yakunlaydi
+const NEW_LOG_LINE = [
+  /^\d{4}-\d{2}-\d{2}[T ]/, // 2026-07-30 12:00:01
+  /^\d{2}:\d{2}:\d{2}/, // 12:00:01
+  /^\[\d/, // [2026-...] yoki [12:00...]
+  /(^|[\s[|])(INFO|DEBUG|TRACE|NOTICE|VERBOSE)([\s\]:|]|$)/,
+  /^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\//, // HTTP access log
+];
+
+// Agentning o'z loglari qayta ushlanib, cheksiz siklga tushmasligi uchun
+const SELF = /\[pingo\]/;
+
+const MAX_LINES = 40;
+const MAX_CHARS = 4000;
+const FLUSH_MS = 400; // stack trace to'liq kelib bo'lishi uchun kutish
+
+function isErrorStart(line) {
+  return !SELF.test(line) && ERROR_START.some((re) => re.test(line));
+}
+
+function isNewLogLine(line) {
+  return NEW_LOG_LINE.some((re) => re.test(line));
+}
+
+/**
+ * Blok ichidagi bir xil qatorlarni birlashtiradi.
+ * Masalan bitta xato ketma-ket 5 marta yozilgan bo'lsa, 5 qator emas,
+ * "… (×5)" ko'rinishida bitta qator bo'ladi.
+ */
+function collapseRepeats(lines) {
+  const out = [];
+  let prevKey = null;
+  let count = 0;
+
+  const push = (line) => {
+    if (count > 1) out[out.length - 1] += `   … (×${count})`;
+    if (line !== undefined) out.push(line);
+  };
+
+  for (const line of lines) {
+    const key = line.replace(/\d+/g, '#'); // raqamlar (port, id, vaqt) e'tiborga olinmaydi
+    if (key === prevKey) {
+      count += 1;
+      continue;
+    }
+    push(line);
+    prevKey = key;
+    count = 1;
+  }
+  push();
+
+  return out;
+}
+
+function levelOf(line) {
+  if (/FATAL|panicked|^panic:|core dumped|EMERG/im.test(line)) return 'fatal';
+  return 'error';
+}
+
+/**
+ * Loglar oqimidan xato bloklarini ajratib oladi.
+ *
+ * Blok ochilgach, unga tegishli qatorlar (stack trace, "Caused by",
+ * exception nomi) yig'ib boriladi. Blok ikki holatda yakunlanadi:
+ * yangi oddiy log qatori kelganda yoki 400ms jimlikdan keyin.
+ *
+ * Bu yondashuv stack trace'ni bir nechta xabarga bo'lib yubormaslik uchun —
+ * ortiqcha qator qo'shilgani, xatoni bo'lib tashlagandan ko'ra yaxshiroq.
+ */
+export class LogParser {
+  #lines = [];
+  #level = 'error';
+  #timer = null;
+  #context = {}; // xatodan oldingi kontekst: { request } yoki { operation }
+
+  constructor({ source, cwd, onEvent }) {
+    this.source = source;
+    this.cwd = cwd;
+    this.onEvent = onEvent;
+  }
+
+  push(line) {
+    if (!line || !line.trim() || SELF.test(line)) return;
+
+    const errorStart = isErrorStart(line);
+
+    // Xatodan oldingi kontekstni eslab qolamiz: HTTP so'rov yoki bajarilayotgan amal.
+    // Qaysi biri oxirgi ko'rilgan bo'lsa, o'shani ko'rsatamiz.
+    if (!errorStart) {
+      const req = extractRequest(line);
+      if (req) this.#context = { request: req };
+      else {
+        const op = extractOperation(line);
+        if (op) this.#context = { operation: op };
+      }
+    }
+
+    if (this.#lines.length) {
+      // Oddiy log qatori keldi (va o'zi xato emas) — blokni yakunlaymiz
+      if (!errorStart && isNewLogLine(line)) {
+        this.flush();
+        return;
+      }
+      if (this.#lines.length < MAX_LINES) {
+        this.#lines.push(line);
+        if (errorStart && this.#level !== 'fatal') this.#level = levelOf(line);
+        this.#resetTimer();
+        return;
+      }
+      // Blok to'ldi — yakunlab, kerak bo'lsa yangisini boshlaymiz
+      this.flush();
+    }
+
+    if (errorStart) {
+      this.#lines = [line];
+      this.#level = levelOf(line);
+      this.#resetTimer();
+    }
+  }
+
+  #resetTimer() {
+    clearTimeout(this.#timer);
+    this.#timer = setTimeout(() => this.flush(), FLUSH_MS);
+    this.#timer.unref?.();
+  }
+
+  flush() {
+    clearTimeout(this.#timer);
+    this.#timer = null;
+    if (!this.#lines.length) return;
+
+    const message = collapseRepeats(this.#lines).join('\n').slice(0, MAX_CHARS);
+    const level = this.#level;
+    this.#lines = [];
+
+    // Strukturalangan holda yuboramiz — server formatlashda hech narsa
+    // ajratib olishi shart bo'lmaydi (Sentry/Datadog yondashuvi).
+    this.onEvent({
+      level,
+      summary: extractSummary(message),
+      stack: message,
+      source: this.source,
+      frame: extractFrame(message, this.cwd),
+      ...this.#context,
+      timestamp: Date.now(),
+    });
+  }
+}

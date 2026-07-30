@@ -1,0 +1,19 @@
+{
+  "name": "pingo-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pingo relay — agentlardan kelgan xatolarni Telegram guruhlarga uzatadi",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/index.js",
+    "dev": "node --env-file-if-exists=.env --watch src/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "telegraf": "^4.16.3"
+  }
+}
