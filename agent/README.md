@@ -51,6 +51,14 @@ Config bo'sh bo'lsa agent PM2 va Docker'ni o'zi topadi. Qo'lda ko'rsatish:
 
 `cwd` — loyiha papkasi. Ko'rsatilsa, xabarga repo nomi, branch va commit qo'shiladi.
 
+Ba'zi konteynerlarni kuzatmaslik uchun:
+
+```bash
+docker run ... -e PINGO_IGNORE=xgo-backend,boshqasi ... pingo-agent
+```
+
+yoki configda: `"ignore": ["xgo-backend"]`, yoki `pingo start --ignore xgo-backend`
+
 ## Talablar
 
 - Node.js 20+

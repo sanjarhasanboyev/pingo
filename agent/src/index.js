@@ -11,10 +11,14 @@ const log = (msg) => console.log(`[pingo] ${msg}`);
 /**
  * Config bo'sh bo'lsa — serverda nima ishlayotganini o'zi topadi.
  */
-export function autoDetect() {
+export function autoDetect(ignore = []) {
+  const skip = new Set(ignore.map((s) => String(s).trim()).filter(Boolean));
+
   const found = [];
-  if (hasPm2()) found.push({ type: 'pm2' });
-  for (const container of listContainers()) found.push({ type: 'docker', container });
+  if (hasPm2() && !skip.has('pm2')) found.push({ type: 'pm2' });
+  for (const container of listContainers()) {
+    if (!skip.has(container)) found.push({ type: 'docker', container });
+  }
   return found;
 }
 
@@ -49,7 +53,8 @@ export async function runAgent(config) {
 
   let sources = config.watch;
   if (!sources?.length) {
-    sources = autoDetect();
+    sources = autoDetect(config.ignore);
+    if (config.ignore?.length) log(`e'tiborsiz qoldirilyapti: ${config.ignore.join(', ')}`);
     if (!sources.length) {
       throw new Error(
         'kuzatish uchun manba topilmadi — configga qo‘shing (pm2 / docker / systemd / log fayl)'

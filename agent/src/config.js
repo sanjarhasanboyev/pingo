@@ -12,6 +12,9 @@ export const DEFAULTS = {
   server: DEFAULT_SERVER,
   // "Tirikman" signali oralig'i (daqiqa). Guruhga xabar yubormaydi — faqat /status uchun.
   heartbeatMinutes: 5,
+  // Kuzatilmaydigan konteyner/manbalar (avtomatik topishda o'tkazib yuboriladi).
+  // Muhit o'zgaruvchisi orqali ham berish mumkin: PINGO_IGNORE=xgo-backend,boshqasi
+  ignore: [],
   // Kuzatiladigan manbalar. Bo'sh bo'lsa agent o'zi topishga harakat qiladi.
   watch: [
     // { type: 'file',    path: '/var/log/app/*.log', cwd: '/srv/app' }

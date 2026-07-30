@@ -29,6 +29,7 @@ Kalitni olish: botni Telegram guruhingizga qo'shing va /connect deb yozing.
 
 Qo'shimcha:
   --server <url>    boshqa relay manzili
+  --ignore a,b      shu konteynerlarni kuzatmaslik
   --config <fayl>   boshqa config fayli
 `;
 
@@ -58,8 +59,10 @@ async function main() {
   const config = { ...loadConfig(file) };
   if (process.env.PINGO_KEY) config.key = process.env.PINGO_KEY;
   if (process.env.PINGO_SERVER) config.server = process.env.PINGO_SERVER;
+  if (process.env.PINGO_IGNORE) config.ignore = process.env.PINGO_IGNORE.split(',');
   if (args.key) config.key = String(args.key);
   if (args.server) config.server = String(args.server);
+  if (args.ignore) config.ignore = String(args.ignore).split(',');
 
   if (cmd === 'init') {
     if (!config.key) {
