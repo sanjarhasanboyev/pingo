@@ -29,6 +29,10 @@ function esc(s) {
 }
 
 function when(ts) {
+  // Buzuq timestamp kelsa hozirgi vaqtni ishlatamiz — xabar yo'qolib ketmasin
+  let d = ts ? new Date(ts) : new Date();
+  if (Number.isNaN(d.getTime())) d = new Date();
+
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: TIMEZONE,
     day: '2-digit',
@@ -37,7 +41,7 @@ function when(ts) {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-  }).formatToParts(ts ? new Date(ts) : new Date());
+  }).formatToParts(d);
 
   const get = (t) => parts.find((p) => p.type === t)?.value ?? '';
   return `${get('day')}.${get('month')}.${get('year')} ${get('hour')}:${get('minute')}`;
@@ -130,9 +134,9 @@ export function formatEvent(event, meta = {}) {
   return blocks.join('\n\n');
 }
 
-export function formatConnected(project) {
+export function formatConnected(project, threadId) {
   return [
-    `✅ <b>${esc(project)}</b> shu guruhga ulandi.`,
+    `✅ <b>${esc(project)}</b> ${threadId ? 'shu bo‘limga' : 'shu guruhga'} ulandi.`,
     '',
     'Endi serveringizda quyidagi buyruqni ishga tushiring:',
   ].join('\n');

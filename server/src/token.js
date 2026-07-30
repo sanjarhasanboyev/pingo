@@ -23,8 +23,11 @@ export function derive(purpose, secret) {
  * Tokenni yaratadi. Ichida chat_id va loyiha nomi bor, HMAC bilan imzolangan.
  * Baza kerak emas — barcha ma'lumot tokenning o'zida yuradi.
  */
-export function createToken({ chatId, project, secret }) {
+export function createToken({ chatId, project, threadId, secret }) {
   const payload = { c: chatId, p: project, t: Math.floor(Date.now() / 1000) };
+  // Forum guruhlarida xabar aynan shu bo'limga (topic) yuboriladi
+  if (threadId) payload.h = threadId;
+
   const payloadB64 = b64url(JSON.stringify(payload));
   return `${PREFIX}${payloadB64}.${sign(payloadB64, secret)}`;
 }
@@ -45,9 +48,9 @@ export function verifyToken(token, secret) {
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
 
   try {
-    const { c, p, t } = JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
+    const { c, p, t, h } = JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
     if (typeof c !== 'number' || typeof p !== 'string') return null;
-    return { chatId: c, project: p, issuedAt: t };
+    return { chatId: c, project: p, issuedAt: t, threadId: typeof h === 'number' ? h : undefined };
   } catch {
     return null;
   }

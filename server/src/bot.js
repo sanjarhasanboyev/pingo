@@ -87,11 +87,15 @@ export function createBot({ botToken, secret, status, revocations, agentPackage 
     const project =
       ctx.message.text.split(/\s+/).slice(1).join(' ').trim().slice(0, 64) || ctx.chat.title || 'loyiha';
 
+    // Forum guruhida buyruq qaysi bo'limda yozilgan bo'lsa, xabarlar
+    // ham o'sha bo'limga tushadi. Oddiy guruhda bu maydon bo'lmaydi.
+    const threadId = ctx.message?.is_topic_message ? ctx.message.message_thread_id : undefined;
+
     // Yangi kalit berilgandan keyin eski bekor qilish kuchini yo'qotadi
     revocations.clear(ctx.chat.id);
-    const token = createToken({ chatId: ctx.chat.id, project, secret });
+    const token = createToken({ chatId: ctx.chat.id, project, threadId, secret });
 
-    await ctx.replyWithHTML(formatConnected(project));
+    await ctx.replyWithHTML(formatConnected(project, threadId));
     // Buyruqni alohida xabarda yuboramiz — nusxa olish qulay bo'lsin.
     await ctx.replyWithHTML(
       `<pre>npx ${agentPackage} start --key ${token}</pre>\n\n` +

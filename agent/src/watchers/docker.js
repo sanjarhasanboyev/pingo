@@ -1,16 +1,26 @@
 import { execFileSync } from 'node:child_process';
+import os from 'node:os';
 import { LogParser } from '../detect.js';
 import { spawnLines } from './stream.js';
 
+/**
+ * Ishlab turgan konteynerlar ro'yxati.
+ *
+ * Agentning O'Z konteyneri ro'yxatdan chiqariladi: uni kuzatishning ma'nosi yo'q
+ * va o'z loglarini qayta o'qish keraksiz aylanma yuk beradi.
+ * Konteyner ichida hostname — qisqa konteyner ID'siga teng bo'ladi.
+ */
 export function listContainers() {
   try {
-    return execFileSync('docker', ['ps', '--format', '{{.Names}}'], {
+    const self = os.hostname();
+    return execFileSync('docker', ['ps', '--format', '{{.ID}}\t{{.Names}}'], {
       encoding: 'utf8',
       timeout: 5000,
     })
       .split('\n')
-      .map((s) => s.trim())
-      .filter(Boolean);
+      .map((line) => line.split('\t'))
+      .filter(([id, name]) => name?.trim() && !self.startsWith(id.trim()))
+      .map(([, name]) => name.trim());
   } catch {
     return [];
   }

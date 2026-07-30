@@ -113,6 +113,16 @@ async function main() {
   process.exit(1);
 }
 
+// Kutilmagan xato jarayonni o'ldirmasin: konteyner "restart: always" bilan
+// ishlayotgan bo'lsa cheksiz qayta ishga tushish sikliga tushib qolardi.
+// Kuzatuvchilar mustaqil ishlaydi, shuning uchun bitta xato boshqasini to'xtatmaydi.
+process.on('uncaughtException', (err) => {
+  console.error(`[pingo] kutilmagan xato: ${err?.message || err}`);
+});
+process.on('unhandledRejection', (err) => {
+  console.error(`[pingo] kutilmagan rad javob: ${err?.message || err}`);
+});
+
 main().catch((err) => {
   console.error(`[pingo] ${err.message}`);
   process.exit(1);

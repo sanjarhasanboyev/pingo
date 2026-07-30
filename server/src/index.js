@@ -32,6 +32,8 @@ const throttle = new Throttle(async (chatId, event) => {
     await bot.telegram.sendMessage(chatId, formatEvent(event, { project: event.project }), {
       parse_mode: 'HTML',
       link_preview_options: { is_disabled: true },
+      // Forum guruhida aynan ulangan bo'limga yuboriladi
+      ...(event.threadId ? { message_thread_id: event.threadId } : {}),
     });
   } catch (err) {
     // Bot guruhdan chiqarilgan yoki bloklangan — ulanishni bekor qilamiz,
@@ -99,6 +101,7 @@ app.post('/report', async (req, res) => {
       request: raw.request,
       timestamp: raw.timestamp,
       project: claims.project,
+      threadId: claims.threadId,
     };
 
     status.error(claims.chatId, claims.project, event);
@@ -136,6 +139,21 @@ async function main() {
 
   app.listen(PORT, () => console.log(`[pingo] server ${PORT}-portda`));
 }
+
+// Bitta so'rovdagi kutilmagan xato butun relay'ni yiqitmasin —
+// aks holda barcha foydalanuvchilar uzilib qoladi.
+process.on('uncaughtException', (err) => {
+  console.error('[pingo] kutilmagan xato:', err?.message || err);
+});
+process.on('unhandledRejection', (err) => {
+  console.error('[pingo] kutilmagan rad javob:', err?.message || err);
+});
+
+// Noto'g'ri JSON va boshqa so'rov xatolari uchun
+app.use((err, _req, res, _next) => {
+  console.error('[pingo] so‘rov xatosi:', err?.message || err);
+  res.status(400).json({ error: 'so‘rov noto‘g‘ri' });
+});
 
 main().catch((err) => {
   console.error('[pingo] ishga tushmadi:', err);
