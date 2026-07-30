@@ -2,8 +2,9 @@
 // Maqsad: dasturchi 2 soniyada "nima bo'ldi?" degan savolga javob olsin.
 
 // Logger prefiksi: "2026-07-30 14:23:11 ERROR c.e.OrderService - matn"
+// yoki PostgreSQL uslubi: "2026-07-30 12:39:48.242 UTC [7290] FATAL:  matn"
 const LOG_PREFIX =
-  /^[\d\-/:.T ]*\s*(?:\[[^\]]*\]\s*)?(?:ERROR|FATAL|CRITICAL|SEVERE|WARN)\s*[-:|]?\s*(?:[\w.$]+\s*[-:]\s*)?/i;
+  /^[\d\-/:.T ]*\s*(?:[A-Z]{2,5}\s+)?(?:\[[^\]]*\]\s*)?(?:ERROR|FATAL|CRITICAL|SEVERE|WARN)\s*[-:|]?\s*(?:[\w.$]+\s*[-:]\s*)?/i;
 
 // Exception qatori: "java.lang.NullPointerException: matn" yoki "ZeroDivisionError: matn"
 const EXCEPTION = /^([\w.$]*(?:Exception|Error))\s*:\s*(.*)$/;

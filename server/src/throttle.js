@@ -18,9 +18,13 @@ export class Throttle {
 
   #fingerprint(chatId, event) {
     // Xato matnining birinchi qatori + manba — takrorni aniqlash uchun yetarli.
-    // Raqamlar (id, vaqt, port) olib tashlanadi, aks holda har safar yangi ko'rinadi.
+    // Raqamlar va qo'shtirnoq/apostrof ichidagi qiymatlar (id, vaqt, port,
+    // username, email) olib tashlanadi — aks holda masalan brute-force
+    // urinishlarida har safar boshqa username tufayli yangi xato deb hisoblanadi.
     const base = event.summary || String(event.stack || event.message || '').split('\n')[0];
-    const firstLine = base.replace(/\d+/g, '#');
+    const firstLine = base
+      .replace(/"[^"]*"|'[^']*'/g, '#')
+      .replace(/\d+/g, '#');
     return crypto
       .createHash('sha1')
       .update(`${chatId}|${event.source || ''}|${firstLine}`)
