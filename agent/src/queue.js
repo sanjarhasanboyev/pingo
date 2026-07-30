@@ -3,6 +3,7 @@ const BATCH = 20;
 const FLUSH_MS = 2000;
 const BASE_BACKOFF_MS = 4000;
 const MAX_BACKOFF_MS = 60_000;
+const REVOKED_RETRY_MS = 300_000; // kalit bekor bo'lsa 5 daqiqada bir qayta tekshiramiz
 
 /**
  * Hodisalarni to'plab, serverga guruh-guruh yuboradi.
@@ -17,12 +18,12 @@ export class ReportQueue {
   #timer = null;
   #sending = false;
   #stopped = false;
+  #warnedRevoked = false;
 
-  constructor({ serverUrl, key, onLog = () => {}, onRevoked = () => {} }) {
+  constructor({ serverUrl, key, onLog = () => {} }) {
     this.serverUrl = serverUrl.replace(/\/$/, '');
     this.key = key;
     this.onLog = onLog;
-    this.onRevoked = onRevoked; // kalit bekor qilinganda chaqiriladi
   }
 
   start() {
@@ -66,15 +67,22 @@ export class ReportQueue {
       });
 
       if (res.status === 401 || res.status === 403) {
-        // Kalit yaroqsiz yoki bekor qilingan — qayta urinishdan foyda yo'q
+        // Kalit yaroqsiz yoki ulanish bekor qilingan.
+        // Jarayonni tugatmaymiz: konteyner "restart: always" bilan ishlayotgan
+        // bo'lsa cheksiz qayta ishga tushish sikliga tushib qolardi.
+        // Buning o'rniga navbatni bo'shatib, uzoq oraliqda qayta tekshiramiz —
+        // server qayta ishga tushsa yoki qaytadan ulansangiz o'zi tiklanadi.
         this.#items = [];
-        this.stop();
-        this.onLog(
-          res.status === 403
-            ? 'ulanish bekor qilindi — guruhda /connect orqali yangi kalit oling'
-            : 'kalit yaroqsiz — guruhda /connect orqali yangi kalit oling'
-        );
-        this.onRevoked();
+        this.#retryAt = Date.now() + REVOKED_RETRY_MS;
+
+        if (!this.#warnedRevoked) {
+          this.#warnedRevoked = true;
+          this.onLog(
+            `${res.status === 403 ? 'ulanish bekor qilingan' : 'kalit yaroqsiz'} — ` +
+              'guruhda /connect orqali yangi kalit oling. ' +
+              `Har ${REVOKED_RETRY_MS / 60000} daqiqada qayta tekshiraman.`
+          );
+        }
         return;
       }
 
@@ -82,6 +90,7 @@ export class ReportQueue {
 
       this.#failures = 0;
       this.#retryAt = 0;
+      this.#warnedRevoked = false;
     } catch (err) {
       // Yuborilmagan hodisalarni navbat boshiga qaytaramiz
       this.#items.unshift(...batch);

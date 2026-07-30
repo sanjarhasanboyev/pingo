@@ -22,24 +22,17 @@ export async function runAgent(config) {
   if (!config.key) throw new Error('kalit yo‘q — avval `pingo init` yoki `--key` bering');
 
   const host = os.hostname();
-  // Ulanish bekor qilinsa (guruhda /disconnect yoki bot guruhdan chiqarilsa)
-  // agent o'zi to'xtaydi — behuda ishlab turmasligi uchun.
   const watchers = [];
-  const queue = new ReportQueue({
-    serverUrl: config.server,
-    key: config.key,
-    onLog: log,
-    onRevoked: () => {
-      for (const w of watchers) w.stop();
-      log('kuzatish to‘xtatildi');
-      process.exit(0);
-    },
-  });
+  const queue = new ReportQueue({ serverUrl: config.server, key: config.key, onLog: log });
   queue.start();
 
   // Hodisani yuborishdan oldin git ma'lumoti bilan boyitamiz
   const emit = (event) => {
     const { cwd, ...rest } = event;
+
+    if (rest.level !== 'heartbeat') {
+      log(`aniqlandi [${rest.level}] ${rest.source}: ${String(rest.summary || '').slice(0, 90)}`);
+    }
 
     // Ma'lumot allaqachon bor (masalan Docker image yorliqlaridan) — git kerak emas
     if (rest.repo || rest.commit) {
