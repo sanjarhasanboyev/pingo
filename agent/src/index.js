@@ -6,6 +6,7 @@ import { watchDocker, listContainers } from './watchers/docker.js';
 import { watchSystemd } from './watchers/systemd.js';
 import { watchPm2, hasPm2 } from './watchers/pm2.js';
 import { projectFromKey, selectSources } from './target.js';
+import { askUserToPick } from './pairing.js';
 
 const log = (msg) => console.log(`[pingo] ${msg}`);
 
@@ -54,13 +55,23 @@ export async function runAgent(config) {
 
   if (config.ignore?.length) log(`e'tiborsiz qoldirilyapti: ${config.ignore.join(', ')}`);
 
+  const detected = autoDetect(config.ignore);
   const project = projectFromKey(config.key);
-  const sources = selectSources({
-    config,
-    detected: autoDetect(config.ignore),
-    project,
-    log,
-  });
+
+  let sources = selectSources({ config, detected, project, log });
+
+  // Aniq ko'rsatilmagan va nom ham mos kelmagan bo'lsa — guruhda so'raymiz.
+  // Foydalanuvchi konteyner nomini yozib o'tirmasdan ro'yxatdan tanlaydi.
+  const aniqKorsatilgan = config.watch?.length || config.only?.length;
+  if (!aniqKorsatilgan && sources.length > 1) {
+    sources = await askUserToPick({
+      serverUrl: config.server,
+      key: config.key,
+      sources,
+      host,
+      log,
+    });
+  }
 
   if (!sources.length) {
     throw new Error(

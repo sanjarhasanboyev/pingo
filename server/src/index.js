@@ -1,10 +1,11 @@
 import express from 'express';
-import { createBot, registerCommands } from './bot.js';
+import { createBot, registerCommands, askWhatToWatch } from './bot.js';
 import { verifyToken, derive } from './token.js';
 import { formatEvent } from './format.js';
 import { Throttle } from './throttle.js';
 import { StatusStore } from './status.js';
 import { Revocations } from './revocations.js';
+import { Registrations } from './registrations.js';
 
 const {
   BOT_TOKEN,
@@ -25,7 +26,8 @@ if (!SECRET_KEY || SECRET_KEY.length < 32) {
 const derive_ = (purpose) => derive(purpose, SECRET_KEY);
 const status = new StatusStore();
 const revocations = new Revocations();
-const bot = createBot({ botToken: BOT_TOKEN, secret: SECRET_KEY, status, revocations, agentPackage: AGENT_PACKAGE });
+const registrations = new Registrations();
+const bot = createBot({ botToken: BOT_TOKEN, secret: SECRET_KEY, status, revocations, registrations, agentPackage: AGENT_PACKAGE });
 
 const throttle = new Throttle(async (chatId, event) => {
   try {
@@ -112,6 +114,46 @@ app.post('/report', async (req, res) => {
       console.error('[report] yuborilmadi:', err?.message || err);
     }
   }
+});
+
+// Agent ishga tushdi va kuzata oladigan manbalarini bildirmoqda.
+// Guruhga tanlov tugmalari yuboriladi.
+app.post('/register', async (req, res) => {
+  const { key, sources, host } = req.body || {};
+  const claims = verifyToken(key, SECRET_KEY);
+  if (!claims) return res.status(401).json({ error: 'kalit yaroqsiz' });
+  if (revocations.isRevoked(claims)) return res.status(403).json({ error: 'ulanish bekor qilingan' });
+  if (!Array.isArray(sources) || !sources.length) return res.status(400).json({ error: 'manba yo‘q' });
+
+  // Bir xil agent qayta-qayta so'ramasin
+  if (registrations.pending(claims.chatId, host)) return res.json({ ok: true, pending: true });
+
+  const regId = registrations.open({
+    chatId: claims.chatId,
+    threadId: claims.threadId,
+    sources: sources.slice(0, 20),
+    host: String(host || 'server').slice(0, 64),
+  });
+
+  res.json({ ok: true, pending: true });
+
+  askWhatToWatch(bot, {
+    regId,
+    chatId: claims.chatId,
+    threadId: claims.threadId,
+    sources: sources.slice(0, 20),
+    host,
+  }).catch((err) => console.error('[register] tugmalar yuborilmadi:', err?.message || err));
+});
+
+// Agent tanlov qilinganini shu yerdan bilib oladi
+app.get('/assignment', (req, res) => {
+  const claims = verifyToken(req.query.key, SECRET_KEY);
+  if (!claims) return res.status(401).json({ error: 'kalit yaroqsiz' });
+  if (revocations.isRevoked(claims)) return res.status(403).json({ error: 'ulanish bekor qilingan' });
+
+  const choice = registrations.take(claims.chatId, String(req.query.host || ''));
+  res.json({ ok: true, choice });
 });
 
 async function main() {

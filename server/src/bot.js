@@ -40,7 +40,33 @@ export async function registerCommands(bot) {
   await bot.telegram.setMyCommands(PRIVATE_COMMANDS, { scope: { type: 'all_private_chats' } });
 }
 
-export function createBot({ botToken, secret, status, revocations, agentPackage = 'pingo-agent' }) {
+/**
+ * Agent ro'yxatdan o'tganda guruhga tanlov tugmalarini yuboradi.
+ */
+export async function askWhatToWatch(bot, { regId, chatId, threadId, sources, host }) {
+  const tugmalar = sources.map((s, i) => [
+    { text: s.container || s.type, callback_data: `pick:${regId}:${i}` },
+  ]);
+  tugmalar.push([{ text: '📋 Hammasi', callback_data: `pick:${regId}:all` }]);
+
+  const matn = [
+    `🖥 <b>${esc(host)}</b> serverida ${sources.length} ta manba topildi.`,
+    '',
+    'Qaysi birini kuzatay?',
+  ].join('\n');
+
+  await bot.telegram.sendMessage(chatId, matn, {
+    parse_mode: 'HTML',
+    reply_markup: { inline_keyboard: tugmalar },
+    ...(threadId ? { message_thread_id: threadId } : {}),
+  });
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+export function createBot({ botToken, secret, status, revocations, registrations, agentPackage = 'pingo-agent' }) {
   const bot = new Telegraf(botToken);
 
   bot.start(async (ctx) => {
@@ -84,6 +110,7 @@ export function createBot({ botToken, secret, status, revocations, agentPackage 
       return ctx.reply('Bu buyruqni faqat guruh adminlari bajara oladi.');
     }
 
+    // Nom ixtiyoriy: berilmasa agent ishga tushgach tugmalar orqali tanlanadi
     const project =
       ctx.message.text.split(/\s+/).slice(1).join(' ').trim().slice(0, 64) || ctx.chat.title || 'loyiha';
 
@@ -130,6 +157,33 @@ export function createBot({ botToken, secret, status, revocations, agentPackage 
   bot.command('status', async (ctx) => {
     await ctx.replyWithHTML(status.render(ctx.chat.id), {
       link_preview_options: { is_disabled: true },
+    });
+  });
+
+  // Tanlov tugmasi bosilganda
+  bot.on('callback_query', async (ctx) => {
+    const data = ctx.callbackQuery.data || '';
+    if (!data.startsWith('pick:')) return ctx.answerCbQuery();
+
+    const [, regId, index] = data.split(':');
+    const reg = registrations.get(regId);
+    if (!reg) {
+      await ctx.answerCbQuery('Bu so‘rov eskirgan — agentni qayta ishga tushiring', { show_alert: true });
+      return;
+    }
+    if (!(await isAdmin(ctx))) {
+      return ctx.answerCbQuery('Faqat guruh adminlari tanlay oladi', { show_alert: true });
+    }
+
+    const choice = index === 'all' ? { all: true } : reg.sources[Number(index)];
+    if (!choice) return ctx.answerCbQuery('Noto‘g‘ri tanlov');
+
+    registrations.choose(regId, choice);
+    const nom = choice.all ? 'hammasi' : choice.container || choice.type;
+
+    await ctx.answerCbQuery(`Tanlandi: ${nom}`);
+    await ctx.editMessageText(`✅ Kuzatilyapti: <b>${esc(nom)}</b>\n🖥 <code>${esc(reg.host)}</code>`, {
+      parse_mode: 'HTML',
     });
   });
 

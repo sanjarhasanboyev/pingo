@@ -53,11 +53,23 @@ Config bo'sh bo'lsa agent PM2 va Docker'ni o'zi topadi. Qo'lda ko'rsatish:
 
 ### Qaysi konteyner kuzatiladi
 
-Agent kalitdagi loyiha nomiga **mos keluvchi** konteynerni kuzatadi. Ya'ni
-guruhda `/connect xgo-backend` desangiz, faqat `xgo-backend` konteyneri
-kuzatiladi — serverdagi boshqa loyihalarga tegilmaydi.
+Agent ishga tushganda serverdagi manbalarni topadi va **guruhda tanlov
+tugmalarini** ko'rsatadi:
 
-Nom mos kelmasa (masalan loyiha nomi `lcts-server`, konteyner `xgo-backend`):
+```
+🖥 vmi3351203 serverida 3 ta manba topildi.
+Qaysi birini kuzatay?
+  [lc_postgres]  [lc-test-system]  [xgo-backend]  [📋 Hammasi]
+```
+
+Tugmani bosasiz — agent faqat o'shani kuzata boshlaydi. Nom yozib
+o'tirish shart emas.
+
+Tanlov faqat guruh adminlariga ko'rsatiladi. 10 daqiqa ichida hech kim
+tanlamasa yoki relay bilan aloqa bo'lmasa, barcha manbalar kuzatiladi —
+xabar yo'qolgandan ko'ra ortiqcha kelgani yaxshi.
+
+Tanlovni o'tkazib yuborish uchun (masalan avtomatik deploy'da):
 
 ```bash
 docker run ... -e PINGO_WATCH=xgo-backend ... pingo-agent
