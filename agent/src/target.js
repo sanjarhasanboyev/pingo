@@ -7,8 +7,11 @@
 export function projectFromKey(key) {
   try {
     const payload = String(key).replace(/^pg_/, '').split('.')[0];
-    const { p } = JSON.parse(Buffer.from(payload, 'base64url').toString());
-    return typeof p === 'string' ? p : '';
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString());
+
+    // Yangi format: [chatId, project, ...] | Eski format: { c, p, ... }
+    const project = Array.isArray(data) ? data[1] : data?.p;
+    return typeof project === 'string' ? project : '';
   } catch {
     return '';
   }

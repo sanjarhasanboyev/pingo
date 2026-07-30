@@ -123,10 +123,22 @@ export function createBot({ botToken, secret, status, revocations, registrations
     const token = createToken({ chatId: ctx.chat.id, project, threadId, secret });
 
     await ctx.replyWithHTML(formatConnected(project, threadId));
-    // Buyruqni alohida xabarda yuboramiz — nusxa olish qulay bo'lsin.
+
+    // Kalit alohida xabarda va alohida qatorda — uzun matn xabarni
+    // yon tomonga cho'zib yubormasligi uchun.
     await ctx.replyWithHTML(
-      `<pre>npx ${agentPackage} start --key ${token}</pre>\n\n` +
-        '⚠️ Bu kalitni maxfiy saqlang — u shu guruhga xabar yuborish huquqini beradi.'
+      [
+        '🔑 <b>Kalit</b> (bosib nusxa oling):',
+        `<code>${token}</code>`,
+        '',
+        '<b>Serverda ishga tushiring:</b>',
+        `<code>npx ${agentPackage} start --key KALIT</code>`,
+        '',
+        'yoki Docker bilan:',
+        `<code>-e PINGO_KEY=KALIT</code>`,
+        '',
+        '⚠️ Kalitni maxfiy saqlang — u shu guruhga xabar yuborish huquqini beradi.',
+      ].join('\n')
     );
   });
 

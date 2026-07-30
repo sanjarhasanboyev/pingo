@@ -1,12 +1,14 @@
 import crypto from 'node:crypto';
 
 const PREFIX = 'pg_';
+const SIG_LEN = 22; // 16 bayt HMAC (128 bit) — bu maqsad uchun yetarli va qisqa
+const OLD_SIG_LEN = 43; // eski format: to'liq 32 baytli HMAC
 
 function b64url(buf) {
   return Buffer.from(buf).toString('base64url');
 }
 
-function sign(payloadB64, secret) {
+function hmac(payloadB64, secret) {
   return crypto.createHmac('sha256', secret).update(payloadB64).digest('base64url');
 }
 
@@ -20,16 +22,35 @@ export function derive(purpose, secret) {
 }
 
 /**
- * Tokenni yaratadi. Ichida chat_id va loyiha nomi bor, HMAC bilan imzolangan.
- * Baza kerak emas — barcha ma'lumot tokenning o'zida yuradi.
+ * Tokenni yaratadi. Ichida chat_id, loyiha nomi va (forum bo'lsa) bo'lim
+ * raqami bor, HMAC bilan imzolangan. Baza kerak emas — barcha ma'lumot
+ * tokenning o'zida yuradi.
+ *
+ * Payload massiv ko'rinishida: [chatId, project, vaqt, bo'lim?]
+ * Obyekt kalitlari ("c", "p", ...) joy egallamasligi uchun.
  */
 export function createToken({ chatId, project, threadId, secret }) {
-  const payload = { c: chatId, p: project, t: Math.floor(Date.now() / 1000) };
-  // Forum guruhlarida xabar aynan shu bo'limga (topic) yuboriladi
-  if (threadId) payload.h = threadId;
+  const payload = [chatId, project, Math.floor(Date.now() / 1000)];
+  if (threadId) payload.push(threadId);
 
   const payloadB64 = b64url(JSON.stringify(payload));
-  return `${PREFIX}${payloadB64}.${sign(payloadB64, secret)}`;
+  return `${PREFIX}${payloadB64}.${hmac(payloadB64, secret).slice(0, SIG_LEN)}`;
+}
+
+function parsePayload(payloadB64) {
+  const data = JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
+
+  // Yangi format: [chatId, project, vaqt, bo'lim?]
+  if (Array.isArray(data)) {
+    const [c, p, t, h] = data;
+    if (typeof c !== 'number' || typeof p !== 'string') return null;
+    return { chatId: c, project: p, issuedAt: t, threadId: typeof h === 'number' ? h : undefined };
+  }
+
+  // Eski format: { c, p, t, h } — tarqatilgan kalitlar ishlashda davom etsin
+  const { c, p, t, h } = data;
+  if (typeof c !== 'number' || typeof p !== 'string') return null;
+  return { chatId: c, project: p, issuedAt: t, threadId: typeof h === 'number' ? h : undefined };
 }
 
 /**
@@ -41,16 +62,17 @@ export function verifyToken(token, secret) {
   const [payloadB64, signature] = token.slice(PREFIX.length).split('.');
   if (!payloadB64 || !signature) return null;
 
-  const expected = sign(payloadB64, secret);
-  // timing-safe solishtirish
+  // Imzo uzunligi faqat ma'lum formatlardan biri bo'lishi mumkin —
+  // aks holda qisqa imzo bilan tekshiruvni chetlab o'tish mumkin bo'lardi
+  if (signature.length !== SIG_LEN && signature.length !== OLD_SIG_LEN) return null;
+
+  const expected = hmac(payloadB64, secret).slice(0, signature.length);
   const a = Buffer.from(signature);
   const b = Buffer.from(expected);
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
 
   try {
-    const { c, p, t, h } = JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
-    if (typeof c !== 'number' || typeof p !== 'string') return null;
-    return { chatId: c, project: p, issuedAt: t, threadId: typeof h === 'number' ? h : undefined };
+    return parsePayload(payloadB64);
   } catch {
     return null;
   }
