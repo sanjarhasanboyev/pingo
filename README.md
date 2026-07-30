@@ -34,6 +34,10 @@ Xatolar shu guruhga tusha boshlaydi.
 | `/status` | ulangan loyihalar holati (🟢 / 🔴 / ⚪️) |
 | `/disconnect` | ulanishni bekor qiladi, agent o'zi to'xtaydi (admin) |
 
+`/connect` faqat guruhga hech narsa ulanmagan bo'lsagina ishlaydi — allaqachon
+loyiha ulangan bo'lsa, avval `/disconnect` qilish talab qilinadi. Bu bitta
+guruhga ikkita "yetim" kalit yaratilib qolishining oldini oladi.
+
 Doimiy uzish uchun botni guruhdan chiqarish kifoya — u holda ulanish
 avtomatik bekor bo'ladi.
 
