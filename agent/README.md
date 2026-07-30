@@ -51,6 +51,21 @@ Config bo'sh bo'lsa agent PM2 va Docker'ni o'zi topadi. Qo'lda ko'rsatish:
 
 `cwd` — loyiha papkasi. Ko'rsatilsa, xabarga repo nomi, branch va commit qo'shiladi.
 
+### Qaysi konteyner kuzatiladi
+
+Agent kalitdagi loyiha nomiga **mos keluvchi** konteynerni kuzatadi. Ya'ni
+guruhda `/connect xgo-backend` desangiz, faqat `xgo-backend` konteyneri
+kuzatiladi — serverdagi boshqa loyihalarga tegilmaydi.
+
+Nom mos kelmasa (masalan loyiha nomi `lcts-server`, konteyner `xgo-backend`):
+
+```bash
+docker run ... -e PINGO_WATCH=xgo-backend ... pingo-agent
+```
+
+Bir nechta loyihani alohida guruhlarga ulash uchun har biriga alohida kalit
+oling va alohida agent ishga tushiring (`--name pingo-xgo`, `--name pingo-lc`).
+
 Ba'zi konteynerlarni kuzatmaslik uchun:
 
 ```bash

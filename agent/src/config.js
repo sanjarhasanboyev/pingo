@@ -15,7 +15,10 @@ export const DEFAULTS = {
   // Kuzatilmaydigan konteyner/manbalar (avtomatik topishda o'tkazib yuboriladi).
   // Muhit o'zgaruvchisi orqali ham berish mumkin: PINGO_IGNORE=xgo-backend,boshqasi
   ignore: [],
-  // Kuzatiladigan manbalar. Bo'sh bo'lsa agent o'zi topishga harakat qiladi.
+  // Faqat shu konteynerlarni kuzatish (PINGO_WATCH orqali ham berish mumkin).
+  // Bo'sh bo'lsa, kalitdagi loyiha nomiga mos konteyner tanlanadi.
+  only: [],
+  // Kuzatiladigan manbalar. To'ldirilsa, hamma narsadan ustun turadi.
   watch: [
     // { type: 'file',    path: '/var/log/app/*.log', cwd: '/srv/app' }
     // { type: 'docker',  container: 'api' }

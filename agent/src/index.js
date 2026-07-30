@@ -5,6 +5,7 @@ import { watchFile } from './watchers/file.js';
 import { watchDocker, listContainers } from './watchers/docker.js';
 import { watchSystemd } from './watchers/systemd.js';
 import { watchPm2, hasPm2 } from './watchers/pm2.js';
+import { projectFromKey, selectSources } from './target.js';
 
 const log = (msg) => console.log(`[pingo] ${msg}`);
 
@@ -51,17 +52,22 @@ export async function runAgent(config) {
       .catch(() => queue.add({ ...rest, host }));
   };
 
-  let sources = config.watch;
-  if (!sources?.length) {
-    sources = autoDetect(config.ignore);
-    if (config.ignore?.length) log(`e'tiborsiz qoldirilyapti: ${config.ignore.join(', ')}`);
-    if (!sources.length) {
-      throw new Error(
-        'kuzatish uchun manba topilmadi — configga qo‘shing (pm2 / docker / systemd / log fayl)'
-      );
-    }
-    log(`avtomatik topildi: ${sources.map((s) => s.type + (s.container ? `/${s.container}` : '')).join(', ')}`);
+  if (config.ignore?.length) log(`e'tiborsiz qoldirilyapti: ${config.ignore.join(', ')}`);
+
+  const project = projectFromKey(config.key);
+  const sources = selectSources({
+    config,
+    detected: autoDetect(config.ignore),
+    project,
+    log,
+  });
+
+  if (!sources.length) {
+    throw new Error(
+      'kuzatish uchun manba topilmadi — configga qo‘shing (pm2 / docker / systemd / log fayl)'
+    );
   }
+  log(`kuzatiladi: ${sources.map((s) => s.type + (s.container ? `/${s.container}` : '')).join(', ')}`);
 
   for (const src of sources) {
     try {
