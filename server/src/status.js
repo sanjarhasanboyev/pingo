@@ -53,6 +53,7 @@ export class StatusStore {
       at: now,
       level: event.level,
       frame: event.frame,
+      source: String(event.source || '').replace(/^(docker|pm2|systemd):/, ''),
       first: (event.summary || String(event.stack || event.message || '').split('\n')[0]).slice(0, 120),
     };
   }
@@ -98,7 +99,8 @@ export class StatusStore {
       if (p.lastError) {
         const f = p.lastError.frame;
         const at = f?.name ? ` (<code>${esc(f.name)}${f.line ? `:${f.line}` : ''}</code>)` : '';
-        out.push(`    ↳ oxirgi xato ${ago(now - p.lastError.at)}${at}`);
+        const svc = p.lastError.source ? ` · <code>${esc(p.lastError.source)}</code>` : '';
+        out.push(`    ↳ oxirgi xato ${ago(now - p.lastError.at)}${svc}${at}`);
         out.push(`    <code>${esc(p.lastError.first)}</code>`);
       }
       out.push('');

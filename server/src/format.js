@@ -3,7 +3,7 @@ const STACK_CHARS = 900;
 const TIMEZONE = process.env.TIMEZONE || 'Asia/Tashkent';
 
 // Standart holatda ko'rsatilmaydigan maydonlar.
-// Yoqish: PINGO_SHOW=repo,branch,commit,host,source,count
+// Yoqish: PINGO_SHOW=repo,branch,commit,host,count
 const SHOWN = new Set(
   String(process.env.PINGO_SHOW || '')
     .split(',')
@@ -62,6 +62,15 @@ function normalize(event) {
   return { summary, stack };
 }
 
+/**
+ * Manba nomini qisqartiradi: "docker:xgo-backend" -> "xgo-backend".
+ * Turi (docker/pm2/systemd) muhim emas — xizmat nomi muhim.
+ */
+function shortSource(source) {
+  if (!source) return '';
+  return String(source).replace(/^(docker|pm2|systemd):/, '');
+}
+
 function shortStack(text) {
   const all = String(text ?? '').trim().split('\n');
   let out = all.slice(0, STACK_LINES).join('\n');
@@ -102,7 +111,13 @@ export function formatEvent(event, meta = {}) {
   const blocks = [];
 
   blocks.push(`${lvl.icon} <b>${lvl.label}</b>`);
-  blocks.push(`📦 <b>${esc(project)}</b>`);
+
+  // Loyiha nomi + xato qaysi xizmatdan kelgani.
+  // Bitta agent bir nechta konteyner/jarayonni kuzatishi mumkin, shuning uchun
+  // "qaysi xizmat yiqildi?" degan savolga javob sarlavhada turishi kerak.
+  const service = shortSource(event.source);
+  blocks.push(`📦 <b>${esc(project)}</b>${service ? ` · <code>${esc(service)}</code>` : ''}`);
+
   if (summary) blocks.push(`💬 ${esc(summary)}`);
 
   // Tafsilotlar — bir blok ichida, har biri o'z qatorida
@@ -121,7 +136,6 @@ export function formatEvent(event, meta = {}) {
   if (SHOWN.has('branch') && event.branch) details.push(`🌿 <code>${esc(event.branch)}</code>`);
   if (SHOWN.has('commit') && event.commit) details.push(`🔖 <code>${esc(String(event.commit).slice(0, 7))}</code>`);
   if (SHOWN.has('host') && event.host) details.push(`🖥 <code>${esc(event.host)}</code>`);
-  if (SHOWN.has('source') && event.source) details.push(`📂 <code>${esc(event.source)}</code>`);
   if (SHOWN.has('count') && event.count > 1) details.push(`🔁 ${event.count} marta`);
 
   blocks.push(details.join('\n'));
