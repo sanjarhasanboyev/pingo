@@ -7,6 +7,7 @@ import { StatusStore } from './status.js';
 import { Revocations } from './revocations.js';
 import { Registrations } from './registrations.js';
 import { Connections } from './connections.js';
+import { readState, createSaver } from './state.js';
 
 const {
   BOT_TOKEN,
@@ -25,10 +26,21 @@ if (!SECRET_KEY || SECRET_KEY.length < 32) {
 }
 
 const derive_ = (purpose) => derive(purpose, SECRET_KEY);
+
+// Ulanishlar va bekor qilishlar diskda saqlanadi — qayta ishga tushganda
+// tiklanadi. Holat (StatusStore) va ro'yxatdan o'tishlar saqlanmaydi:
+// ular agentlarning keyingi signalidan o'zi tiklanadi.
+let save = () => {};
+const saved = readState();
+
 const status = new StatusStore();
-const revocations = new Revocations();
+const revocations = new Revocations({ onChange: () => save() });
 const registrations = new Registrations();
-const connections = new Connections();
+const connections = new Connections({ onChange: () => save() });
+
+revocations.load(saved.revocations);
+connections.load(saved.connections);
+save = createSaver(() => ({ revocations: revocations.dump(), connections: connections.dump() }));
 const bot = createBot({ botToken: BOT_TOKEN, secret: SECRET_KEY, status, revocations, registrations, connections, agentPackage: AGENT_PACKAGE });
 
 const throttle = new Throttle(async (chatId, event) => {
@@ -81,6 +93,10 @@ app.post('/report', async (req, res) => {
 
   const list = Array.isArray(events) ? events.slice(0, 20) : [];
   if (!list.length) return res.status(400).json({ error: 'events bo‘sh' });
+
+  // Agent tirik ekan — demak bu guruh haqiqatan ulangan. Relay qayta ishga
+  // tushgan bo'lsa, /connect himoyasi shu yerdan tiklanadi.
+  connections.remember(claims.chatId, claims.project);
 
   // Agent kutib qolmasin — darhol javob qaytaramiz, yuborish fonda ketadi.
   res.json({ ok: true, accepted: list.length });
