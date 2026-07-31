@@ -4,8 +4,16 @@ import { extractSummary, extractOperation } from './summary.js';
 // Xatolarni aniqlash — dasturlash tiliga bog'liq emas, chunki
 // deyarli barcha tillar xatoni stdout/stderr ga shu ko'rinishlarda chiqaradi.
 
+// Log darajasi har doim xabar matnidan OLDIN turadi. Xabarning o'zida esa
+// daraja nomi uchrashi mumkin — masalan Spring'ning "increase the logging
+// level of '...' to ERROR" maslahati WARN qatorini xatoga aylantirib
+// yuborardi. Shuning uchun qatordagi eng birinchi daraja tokeni hal qiladi.
+const LEVEL_TOKEN =
+  /(^|[\s[|(])(ERROR|FATAL|CRITICAL|SEVERE|EMERG|ALERT|WARN(?:ING)?|INFO|DEBUG|TRACE|NOTICE|VERBOSE)([\s\]:|)]|$)/;
+
+const ERROR_LEVELS = new Set(['ERROR', 'FATAL', 'CRITICAL', 'SEVERE', 'EMERG', 'ALERT']);
+
 const ERROR_START = [
-  /(^|[\s[|])(ERROR|FATAL|CRITICAL|SEVERE|EMERG|ALERT)([\s\]:|]|$)/, // umumiy log darajalari
   /\b\w*(Exception|Error)\s*:/, // Error:, NullPointerException:, ValueError:
   /^Traceback \(most recent call last\)/, // Python
   /^panic:/, // Go
@@ -22,7 +30,7 @@ const NEW_LOG_LINE = [
   /^\d{4}-\d{2}-\d{2}[T ]/, // 2026-07-30 12:00:01
   /^\d{2}:\d{2}:\d{2}/, // 12:00:01
   /^\[\d/, // [2026-...] yoki [12:00...]
-  /(^|[\s[|])(INFO|DEBUG|TRACE|NOTICE|VERBOSE)([\s\]:|]|$)/,
+  /(^|[\s[|])(WARN(?:ING)?|INFO|DEBUG|TRACE|NOTICE|VERBOSE)([\s\]:|]|$)/,
   /^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\//, // HTTP access log
 ];
 
@@ -33,8 +41,21 @@ const MAX_LINES = 40;
 const MAX_CHARS = 4000;
 const FLUSH_MS = 400; // stack trace to'liq kelib bo'lishi uchun kutish
 
+function firstLevel(line) {
+  const m = LEVEL_TOKEN.exec(line);
+  return m ? m[2].toUpperCase() : null;
+}
+
 function isErrorStart(line) {
-  return !SELF.test(line) && ERROR_START.some((re) => re.test(line));
+  if (SELF.test(line)) return false;
+
+  // Qatorda daraja ko'rsatilgan bo'lsa — o'shanga ishonamiz. Ilova o'z
+  // xabarini WARN deb belgilagan bo'lsa, uni xato deb hisoblamaymiz.
+  const level = firstLevel(line);
+  if (level) return ERROR_LEVELS.has(level);
+
+  // Darajasiz qatorlar (stack trace boshi, panic, traceback) — shakliga qarab
+  return ERROR_START.some((re) => re.test(line));
 }
 
 function isNewLogLine(line) {
@@ -72,7 +93,9 @@ function collapseRepeats(lines) {
 }
 
 function levelOf(line) {
-  if (/FATAL|panicked|^panic:|core dumped|EMERG/im.test(line)) return 'fatal';
+  const level = firstLevel(line);
+  if (level === 'FATAL' || level === 'EMERG') return 'fatal';
+  if (/panicked|^panic:|core dumped/im.test(line)) return 'fatal';
   return 'error';
 }
 
