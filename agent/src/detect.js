@@ -11,7 +11,16 @@ import { extractSummary, extractOperation } from './summary.js';
 const LEVEL_TOKEN =
   /(^|[\s[|(])(ERROR|FATAL|CRITICAL|SEVERE|EMERG|ALERT|WARN(?:ING)?|INFO|DEBUG|TRACE|NOTICE|VERBOSE)([\s\]:|)]|$)/;
 
+// nginx, Apache va syslog uslubidagi ilovalar darajani kichik harfda, qavs
+// ichida yozadi: "2026/07/31 07:21:00 [error] connect() failed". Kichik harfni
+// hamma joyda tan olsak, oddiy matndagi "error" so'zi yolg'on signal berardi —
+// shuning uchun faqat qavs ichidagisini qabul qilamiz.
+const BRACKET_LEVEL = /\[(error|crit|alert|emerg|fatal|warn|notice|info|debug|trace)\]/i;
+
 const ERROR_LEVELS = new Set(['ERROR', 'FATAL', 'CRITICAL', 'SEVERE', 'EMERG', 'ALERT']);
+
+// nginx "crit" deb qisqartiradi — umumiy nomga keltiramiz
+const LEVEL_ALIAS = { CRIT: 'CRITICAL', WARNING: 'WARN' };
 
 const ERROR_START = [
   /\b\w*(Exception|Error)\s*:/, // Error:, NullPointerException:, ValueError:
@@ -28,6 +37,7 @@ const ERROR_START = [
 // Yangi, xato bo'lmagan log qatori — ochiq blokni yakunlaydi
 const NEW_LOG_LINE = [
   /^\d{4}-\d{2}-\d{2}[T ]/, // 2026-07-30 12:00:01
+  /^\d{4}\/\d{2}\/\d{2} /, // 2026/07/30 12:00:01 — nginx
   /^\d{2}:\d{2}:\d{2}/, // 12:00:01
   /^\[\d/, // [2026-...] yoki [12:00...]
   /(^|[\s[|])(WARN(?:ING)?|INFO|DEBUG|TRACE|NOTICE|VERBOSE)([\s\]:|]|$)/,
@@ -42,8 +52,18 @@ const MAX_CHARS = 4000;
 const FLUSH_MS = 400; // stack trace to'liq kelib bo'lishi uchun kutish
 
 function firstLevel(line) {
-  const m = LEVEL_TOKEN.exec(line);
-  return m ? m[2].toUpperCase() : null;
+  const upper = LEVEL_TOKEN.exec(line);
+  const bracket = BRACKET_LEVEL.exec(line);
+
+  // Ikkalasi ham topilsa — qatorda oldinroq turgani haqiqiy daraja
+  let name = null;
+  if (upper && bracket) name = upper.index <= bracket.index ? upper[2] : bracket[1];
+  else if (upper) name = upper[2];
+  else if (bracket) name = bracket[1];
+  if (!name) return null;
+
+  const level = name.toUpperCase();
+  return LEVEL_ALIAS[level] || level;
 }
 
 function isErrorStart(line) {
