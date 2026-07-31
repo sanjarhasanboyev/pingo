@@ -1,5 +1,11 @@
 const STACK_LINES = 6; // qisqa stack — birinchi qarashda yetarli bo'lgani
 const STACK_CHARS = 900;
+// Telegram <pre> blokini o'ramaydi — uzun qator xabar chegarasidan chiqib,
+// gorizontal siljish paydo qiladi. nginx yoki access log qatorlari bemalol
+// 250+ belgi bo'ladi, shuning uchun o'rashni o'zimiz qilamiz.
+const WRAP_WIDTH = 72;
+const MAX_RENDER_LINES = 14; // o'ragandan keyin xabar cho'zilib ketmasligi uchun
+const SUMMARY_CHARS = 110;
 const TIMEZONE = process.env.TIMEZONE || 'Asia/Tashkent';
 
 // Standart holatda ko'rsatilmaydigan maydonlar.
@@ -26,6 +32,15 @@ function esc(s) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+/** Uzun matnni so'z chegarasida kesadi — yarim so'z qolib ketmasin */
+function cut(text, max) {
+  const s = String(text ?? '').trim();
+  if (s.length <= max) return s;
+  const slice = s.slice(0, max);
+  const space = slice.lastIndexOf(' ');
+  return `${(space > max * 0.6 ? slice.slice(0, space) : slice).replace(/[\s,:;]+$/, '')}…`;
 }
 
 function when(ts) {
@@ -57,9 +72,9 @@ function normalize(event) {
 
   if (!summary) {
     const first = String(stack).split('\n').find((l) => l.trim());
-    summary = String(first || '').trim().slice(0, 120);
+    summary = String(first || '').trim();
   }
-  return { summary, stack };
+  return { summary: cut(summary, SUMMARY_CHARS), stack };
 }
 
 /**
@@ -71,12 +86,36 @@ function shortSource(source) {
   return String(source).replace(/^(docker|pm2|systemd):/, '');
 }
 
+/**
+ * Uzun qatorni bir necha qatorga bo'ladi. Iloji boricha so'z chegarasida
+ * bo'linadi; so'z juda uzun bo'lsa (masalan uzun URL) majburiy kesiladi.
+ */
+function wrapLine(line, width = WRAP_WIDTH) {
+  if (line.length <= width) return [line];
+
+  const out = [];
+  let rest = line;
+  while (rest.length > width) {
+    const space = rest.lastIndexOf(' ', width);
+    const at = space > width * 0.6 ? space : width;
+    out.push(rest.slice(0, at));
+    rest = rest.slice(at).trimStart();
+  }
+  if (rest) out.push(rest);
+  return out;
+}
+
 function shortStack(text) {
   const all = String(text ?? '').trim().split('\n');
-  let out = all.slice(0, STACK_LINES).join('\n');
+  const kept = all.slice(0, STACK_LINES);
 
+  let lines = kept.flatMap((l) => wrapLine(l));
+  const wrappedAway = lines.length > MAX_RENDER_LINES;
+  if (wrappedAway) lines = lines.slice(0, MAX_RENDER_LINES);
+
+  let out = lines.join('\n');
   if (out.length > STACK_CHARS) out = `${out.slice(0, STACK_CHARS)}…`;
-  if (all.length > STACK_LINES) out += '\n…';
+  if (wrappedAway || all.length > STACK_LINES) out += '\n…';
   return out;
 }
 
