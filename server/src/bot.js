@@ -50,7 +50,7 @@ export async function askWhatToWatch(bot, { regId, chatId, threadId, sources, ho
   tugmalar.push([{ text: '📋 Hammasi', callback_data: `pick:${regId}:all` }]);
 
   const matn = [
-    `🖥 <b>${esc(host)}</b> serverida ${sources.length} ta manba topildi.`,
+    `🖥 <b>${esc(host)}</b> serverida ${sources.length} ta loyiha topildi.`,
     '',
     'Qaysi birini kuzatay?',
   ].join('\n');

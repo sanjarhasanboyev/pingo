@@ -26,6 +26,29 @@ export function projectFromKey(key) {
  *   3. Kalitdagi loyiha nomiga mos konteyner — asosiy holat
  *   4. Hech biri mos kelmasa — hammasi (ogohlantirish bilan)
  */
+/**
+ * Configdagi `also` — har doim qo'shiladigan qo'shimcha manbalar.
+ *
+ * `watch` dan farqi: `watch` avtomatik topishning O'RNINI bosadi, `also` esa
+ * ustiga QO'SHADI. Shu sababli log fayllarini (nginx kabi — ular avtomatik
+ * topilmaydi) qo'shsangiz ham konteynerlar avtomatik topilaveradi va
+ * guruhdagi tanlov tugmalari ishlashda davom etadi.
+ */
+export function extras(config) {
+  const list = Array.isArray(config?.also) ? config.also : [];
+  return list.filter((s) => s && typeof s.type === 'string');
+}
+
+/**
+ * Tanlov uchun ko'rsatiladigan manbalar: infratuzilma (baza, kesh) chiqarib
+ * tashlanadi. Hammasi infratuzilma bo'lsa — ro'yxat to'liq qoladi, aks holda
+ * tanlash uchun hech narsa qolmasdi.
+ */
+export function candidates(sources) {
+  const apps = sources.filter((s) => !s.infra);
+  return apps.length ? apps : sources;
+}
+
 export function selectSources({ config, detected, project, log }) {
   if (config.watch?.length) return config.watch;
 

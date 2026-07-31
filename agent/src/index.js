@@ -5,8 +5,9 @@ import { watchFile } from './watchers/file.js';
 import { watchDocker, listContainers } from './watchers/docker.js';
 import { watchSystemd } from './watchers/systemd.js';
 import { watchPm2, hasPm2 } from './watchers/pm2.js';
-import { projectFromKey, selectSources } from './target.js';
+import { projectFromKey, selectSources, candidates, extras } from './target.js';
 import { askUserToPick } from './pairing.js';
+import { isInfra } from './kinds.js';
 
 const log = (msg) => console.log(`[pingo] ${msg}`);
 
@@ -19,7 +20,7 @@ export function autoDetect(ignore = []) {
   const found = [];
   if (hasPm2() && !skip.has('pm2')) found.push({ type: 'pm2' });
   for (const container of listContainers()) {
-    if (!skip.has(container)) found.push({ type: 'docker', container });
+    if (!skip.has(container)) found.push({ type: 'docker', container, infra: isInfra(container) });
   }
   return found;
 }
@@ -60,18 +61,35 @@ export async function runAgent(config) {
 
   let sources = selectSources({ config, detected, project, log });
 
-  // Aniq ko'rsatilmagan va nom ham mos kelmagan bo'lsa — guruhda so'raymiz.
-  // Foydalanuvchi konteyner nomini yozib o'tirmasdan ro'yxatdan tanlaydi.
+  // Aniq ko'rsatilmagan va nom ham mos kelmagan bo'lsa — o'zimiz hal qilamiz.
+  // Baza/kesh kabi yordamchi konteynerlar tanlovdan chiqariladi; bitta loyiha
+  // qolsa umuman so'ralmaydi — foydalanuvchi tugma bosib o'tirmasin.
   const aniqKorsatilgan = config.watch?.length || config.only?.length;
   if (!aniqKorsatilgan && sources.length > 1) {
-    sources = await askUserToPick({
-      serverUrl: config.server,
-      key: config.key,
-      sources,
-      host,
-      log,
-    });
+    const tanlovuchun = candidates(sources);
+    const tashlandi = sources.length - tanlovuchun.length;
+
+    if (tanlovuchun.length === 1) {
+      const s = tanlovuchun[0];
+      log(
+        `loyiha o'zi aniqlandi: ${s.container || s.type}` +
+          (tashlandi ? ` (${tashlandi} ta yordamchi konteyner hisobga olinmadi)` : '')
+      );
+      sources = tanlovuchun;
+    } else {
+      sources = await askUserToPick({
+        serverUrl: config.server,
+        key: config.key,
+        sources: tanlovuchun,
+        host,
+        log,
+      });
+    }
   }
+
+  // Configdagi `also` har doim qo'shiladi — tanlovdan qat'i nazar
+  const qoshimcha = extras(config);
+  if (qoshimcha.length) sources = [...sources, ...qoshimcha];
 
   if (!sources.length) {
     throw new Error(

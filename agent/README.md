@@ -51,19 +51,42 @@ Config bo'sh bo'lsa agent PM2 va Docker'ni o'zi topadi. Qo'lda ko'rsatish:
 
 `cwd` — loyiha papkasi. Ko'rsatilsa, xabarga repo nomi, branch va commit qo'shiladi.
 
+`watch` avtomatik topishning **o'rnini bosadi** — to'ldirilsa konteynerlar
+qidirilmaydi va tanlov tugmalari ham ko'rsatilmaydi.
+
+Faqat qo'shimcha manba kerak bo'lsa (masalan nginx log fayli — u avtomatik
+topilmaydi), `watch` emas, **`also`** ishlating. U avtomatik topilganlarga
+qo'shiladi, ya'ni konteynerlar avvalgidek o'zi topiladi:
+
+```json
+{
+  "also": [
+    { "type": "file", "path": "/var/log/nginx/error.log" }
+  ]
+}
+```
+
 ### Qaysi konteyner kuzatiladi
 
-Agent ishga tushganda serverdagi manbalarni topadi va **guruhda tanlov
-tugmalarini** ko'rsatadi:
+Agent ishga tushganda serverdagi loyihalarni o'zi topadi. Baza, kesh, navbat
+kabi yordamchi konteynerlar (postgres, redis, rabbitmq va h.k.) ro'yxatga
+kirmaydi — ular odatda kuzatilmaydi va tanlovni chalkashtiradi.
+
+**Bitta loyiha qolsa hech narsa so'ralmaydi** — agent o'shani kuzata boshlaydi.
+
+Bir nechta loyiha bo'lsa, guruhda tanlov tugmalari chiqadi:
 
 ```
-🖥 vmi3351203 serverida 3 ta manba topildi.
+🖥 vmi3351203 serverida 2 ta loyiha topildi.
 Qaysi birini kuzatay?
-  [lc_postgres]  [lc-test-system]  [xgo-backend]  [📋 Hammasi]
+  [lc-test-system]  [xgo-backend]  [📋 Hammasi]
 ```
 
 Tugmani bosasiz — agent faqat o'shani kuzata boshlaydi. Nom yozib
 o'tirish shart emas.
+
+Yordamchi konteynerni ataylab kuzatmoqchi bo'lsangiz, uni `watch` yoki `also`
+da aniq ko'rsating.
 
 Tanlov faqat guruh adminlariga ko'rsatiladi. 10 daqiqa ichida hech kim
 tanlamasa yoki relay bilan aloqa bo'lmasa, barcha manbalar kuzatiladi —

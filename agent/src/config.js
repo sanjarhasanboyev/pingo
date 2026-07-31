@@ -18,12 +18,18 @@ export const DEFAULTS = {
   // Faqat shu konteynerlarni kuzatish (PINGO_WATCH orqali ham berish mumkin).
   // Bo'sh bo'lsa, kalitdagi loyiha nomiga mos konteyner tanlanadi.
   only: [],
-  // Kuzatiladigan manbalar. To'ldirilsa, hamma narsadan ustun turadi.
+  // Kuzatiladigan manbalar. To'ldirilsa, avtomatik topishning O'RNINI bosadi
+  // (guruhdagi tanlov tugmalari ham ko'rsatilmaydi).
   watch: [
     // { type: 'file',    path: '/var/log/app/*.log', cwd: '/srv/app' }
     // { type: 'docker',  container: 'api' }
     // { type: 'systemd', unit: 'api.service' }
     // { type: 'pm2' }
+  ],
+  // Avtomatik topilganlarga QO'SHIMCHA manbalar. Odatda log fayllari uchun —
+  // ular o'zi topilmaydi. Konteynerlar avvalgidek avtomatik topilaveradi.
+  also: [
+    // { type: 'file', path: '/var/log/nginx/error.log' }
   ],
 };
 
