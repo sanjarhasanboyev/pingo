@@ -8,6 +8,8 @@ Foydalanuvchi bot yaratmaydi va token olmaydi: bitta umumiy bot guruhga qo'shila
 
 ## Foydalanuvchi uchun
 
+Serverda **Node.js 20+** bo'lishi kerak, boshqa hech narsa shart emas.
+
 1. Telegram'da botni guruhingizga qo'shing
 2. Guruhda: `/connect loyiha_nomi` (faqat guruh adminlari)
 3. Bot bergan buyruqni serveringizda ishga tushiring:
@@ -16,15 +18,22 @@ Foydalanuvchi bot yaratmaydi va token olmaydi: bitta umumiy bot guruhga qo'shila
 npx pingo-agent start --key pg_xxxxx
 ```
 
+Agent serverdagi loyihalarni o'zi topadi va qaysi birini kuzatishni guruhda
+so'raydi — konteyner nomini yozib o'tirish shart emas.
+
 Doimiy ishlashi uchun:
 
 ```bash
 npm install -g pingo-agent
 pingo init --key pg_xxxxx
-pm2 start pingo -- start
+pm2 start pingo -- start && pm2 save
 ```
 
 Xatolar shu guruhga tusha boshlaydi.
+
+Agent host'da ishlaydi, konteyner ichida emas — shuning uchun Docker
+konteynerlari, systemd xizmatlari va log fayllarni bir joydan ko'ra oladi.
+Konteynerda ishlatish kerak bo'lsa: [agent/README.md](agent/README.md).
 
 ### Bot buyruqlari
 

@@ -1,0 +1,35 @@
+name: Publish agent to npm
+
+# Teg qo'yilganda chop etiladi:
+#   git tag agent-v0.1.0 && git push origin agent-v0.1.0
+# Yoki Actions sahifasidan qo'lda ishga tushirish mumkin.
+on:
+  push:
+    tags:
+      - 'agent-v*'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm provenance uchun
+    defaults:
+      run:
+        working-directory: agent
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Testlar
+        run: npm test
+
+      - name: Chop etish
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

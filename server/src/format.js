@@ -191,8 +191,8 @@ export function formatConnected(project, threadId) {
   return [
     `✅ <b>${esc(project)}</b> ${threadId ? 'shu bo‘limga' : 'shu guruhga'} ulandi.`,
     '',
-    `Agent shu nomdagi konteyner yoki jarayonni kuzatadi. Nom boshqacha bo‘lsa, ` +
-      `ishga tushirishda <code>PINGO_WATCH=nomi</code> bilan ko‘rsating.`,
+    'Bu nom faqat shu guruhdagi yorliq. Qaysi loyiha kuzatilishini ' +
+      'agent ishga tushgach shu yerda tanlaysiz.',
     '',
     'Endi serveringizda quyidagi buyruqni ishga tushiring:',
   ].join('\n');

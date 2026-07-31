@@ -27,5 +27,17 @@
   "license": "MIT",
   "scripts": {
     "test": "node test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sanjarhasanboyev/pingo.git",
+    "directory": "agent"
+  },
+  "homepage": "https://github.com/sanjarhasanboyev/pingo#readme",
+  "bugs": {
+    "url": "https://github.com/sanjarhasanboyev/pingo/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
