@@ -57,7 +57,7 @@ check('postgrest-api — loyiha (postgres emas)', !isInfra('postgrest-api'));
   const c = candidates(detected);
   const yakuniy = [...c, ...extras({ also: [{ type: 'file', path: '/var/log/nginx/error.log' }] })];
 
-  check('tugma so\'ralmaydi — bitta loyiha qoldi', c.length === 1);
+  check('tanlovda faqat bitta loyiha ko\'rsatiladi', c.length === 1);
   check('yakuniy ro\'yxat: loyiha + nginx', yakuniy.length === 2);
   check('nginx ro\'yxatda', yakuniy.some((s) => s.path?.includes('nginx')));
   check('baza kuzatilmaydi', !yakuniy.some((s) => s.container === 'lc_postgres'));

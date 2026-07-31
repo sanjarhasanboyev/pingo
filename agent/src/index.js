@@ -61,30 +61,22 @@ export async function runAgent(config) {
 
   let sources = selectSources({ config, detected, project, log });
 
-  // Aniq ko'rsatilmagan va nom ham mos kelmagan bo'lsa — o'zimiz hal qilamiz.
-  // Baza/kesh kabi yordamchi konteynerlar tanlovdan chiqariladi; bitta loyiha
-  // qolsa umuman so'ralmaydi — foydalanuvchi tugma bosib o'tirmasin.
+  // Aniq ko'rsatilmagan bo'lsa — tanlovni har doim guruhda so'raymiz, hatto
+  // bitta loyiha topilganda ham: nima kuzatilayotgani mujmal qolmasin.
+  // Baza/kesh kabi yordamchi konteynerlar ro'yxatdan chiqariladi.
   const aniqKorsatilgan = config.watch?.length || config.only?.length;
-  if (!aniqKorsatilgan && sources.length > 1) {
+  if (!aniqKorsatilgan && sources.length) {
     const tanlovuchun = candidates(sources);
     const tashlandi = sources.length - tanlovuchun.length;
+    if (tashlandi) log(`${tashlandi} ta yordamchi konteyner tanlovga kiritilmadi`);
 
-    if (tanlovuchun.length === 1) {
-      const s = tanlovuchun[0];
-      log(
-        `loyiha o'zi aniqlandi: ${s.container || s.type}` +
-          (tashlandi ? ` (${tashlandi} ta yordamchi konteyner hisobga olinmadi)` : '')
-      );
-      sources = tanlovuchun;
-    } else {
-      sources = await askUserToPick({
-        serverUrl: config.server,
-        key: config.key,
-        sources: tanlovuchun,
-        host,
-        log,
-      });
-    }
+    sources = await askUserToPick({
+      serverUrl: config.server,
+      key: config.key,
+      sources: tanlovuchun,
+      host,
+      log,
+    });
   }
 
   // Configdagi `also` har doim qo'shiladi — tanlovdan qat'i nazar

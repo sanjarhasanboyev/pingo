@@ -72,9 +72,8 @@ Agent ishga tushganda serverdagi loyihalarni o'zi topadi. Baza, kesh, navbat
 kabi yordamchi konteynerlar (postgres, redis, rabbitmq va h.k.) ro'yxatga
 kirmaydi — ular odatda kuzatilmaydi va tanlovni chalkashtiradi.
 
-**Bitta loyiha qolsa hech narsa so'ralmaydi** — agent o'shani kuzata boshlaydi.
-
-Bir nechta loyiha bo'lsa, guruhda tanlov tugmalari chiqadi:
+Topilganidan keyin guruhda tanlov tugmalari chiqadi — bitta loyiha bo'lganda
+ham, shunda nima kuzatilayotgani doim aniq bo'ladi:
 
 ```
 🖥 vmi3351203 serverida 2 ta loyiha topildi.
