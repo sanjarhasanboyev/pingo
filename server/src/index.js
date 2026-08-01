@@ -221,5 +221,10 @@ main().catch((err) => {
   process.exit(1);
 });
 
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
+function shutdown(signal) {
+  save.flush?.(); // kutib turgan holat yozuvi yo'qolmasin
+  bot.stop(signal);
+}
+
+process.once('SIGINT', () => shutdown('SIGINT'));
+process.once('SIGTERM', () => shutdown('SIGTERM'));

@@ -45,9 +45,20 @@ export function createSaver(collect) {
     }
   };
 
-  return () => {
+  const save = () => {
     clearTimeout(timer);
     timer = setTimeout(write, DEBOUNCE_MS);
     timer.unref?.();
   };
+
+  // Jarayon to'xtatilayotganda kutib turgan yozuvni darhol diskka tushiramiz —
+  // aks holda oxirgi soniyalardagi /disconnect yoki /connect yo'qolib ketardi.
+  save.flush = () => {
+    if (!timer) return;
+    clearTimeout(timer);
+    timer = null;
+    write();
+  };
+
+  return save;
 }
