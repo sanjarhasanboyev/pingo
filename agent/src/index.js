@@ -59,12 +59,18 @@ export async function runAgent(config) {
   const detected = autoDetect(config.ignore);
   const project = projectFromKey(config.key);
 
-  let sources = selectSources({ config, detected, project, log });
+  const aniqKorsatilgan = config.watch?.length || config.only?.length;
+  let sources = selectSources({
+    config,
+    detected,
+    project,
+    log,
+    askWillFollow: !aniqKorsatilgan,
+  });
 
   // Aniq ko'rsatilmagan bo'lsa — tanlovni har doim guruhda so'raymiz, hatto
   // bitta loyiha topilganda ham: nima kuzatilayotgani mujmal qolmasin.
   // Baza/kesh kabi yordamchi konteynerlar ro'yxatdan chiqariladi.
-  const aniqKorsatilgan = config.watch?.length || config.only?.length;
   if (!aniqKorsatilgan && sources.length) {
     const tanlovuchun = candidates(sources);
     const tashlandi = sources.length - tanlovuchun.length;

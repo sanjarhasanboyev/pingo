@@ -49,7 +49,12 @@ export function candidates(sources) {
   return apps.length ? apps : sources;
 }
 
-export function selectSources({ config, detected, project, log }) {
+/**
+ * @param askWillFollow - keyin guruhda tanlov so'raladimi. So'ralsa, "nom mos
+ *   kelmadi" ogohlantirishi chiqarilmaydi: nom bermaslik normal holat va
+ *   qaysi manba kuzatilishini foydalanuvchi tugma orqali hal qiladi.
+ */
+export function selectSources({ config, detected, project, log, askWillFollow = false }) {
   if (config.watch?.length) return config.watch;
 
   const only = (config.only || []).map((s) => String(s).trim()).filter(Boolean);
@@ -70,10 +75,12 @@ export function selectSources({ config, detected, project, log }) {
       log(`loyiha "${project}" konteyneriga bog'landi`);
       return mos;
     }
-    log(
-      `"${project}" nomli konteyner topilmadi — serverdagi hamma manba kuzatiladi. ` +
-        'Aniq ko\'rsatish uchun: PINGO_WATCH=konteyner_nomi'
-    );
+    if (!askWillFollow) {
+      log(
+        `"${project}" nomli konteyner topilmadi — serverdagi hamma manba kuzatiladi. ` +
+          'Aniq ko\'rsatish uchun: PINGO_WATCH=konteyner_nomi'
+      );
+    }
   }
 
   return detected;
